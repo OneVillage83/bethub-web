@@ -1,0 +1,18 @@
+# Proxy all /api/* requests to your Fly backend
+[[redirects]]
+from = "/api/*"
+to   = "https://bethub-api.fly.dev/api/:splat"
+status = 200
+force = true
+
+# Optional: long-cache static assets if you add an /assets folder
+[[headers]]
+for = "/assets/*"
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+from = "/api/*"
+to   = "https://bethub-api.fly.dev/api/:splat"
+status = 200
+force = true

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>BetHub Data Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 20px; }
+      button { margin: 6px 8px 6px 0; padding: 8px 12px; }
+      pre { white-space: pre-wrap; background:#111; color:#eee; padding:12px; border-radius:8px; }
+    </style>
+  </head>
+  <body>
+    <h1>BetHub Data Viewer</h1>
+    <div>
+      <button id="btn-sports">Load Sports</button>
+      <button id="btn-events">Today’s NFL Events</button>
+      <button id="btn-affiliates">Affiliates</button>
+      <button id="btn-teams">NFL Teams</button>
+      <button id="btn-schedules">NFL Schedules</button>
+    </div>
+    <pre id="out">Click a button to load data…</pre>
+
+    <script>
+      const out = document.getElementById('out');
+      const show = (d) => out.textContent = JSON.stringify(d, null, 2);
+      const err  = (e) => out.textContent = 'Error: ' + e;
+
+      document.getElementById('btn-sports').onclick = async () => {
+        try { const r = await fetch('/api/public/sports'); show(await r.json()); } catch(e){ err(e); }
+      };
+      document.getElementById('btn-events').onclick = async () => {
+        const date = new Date().toISOString().slice(0,10);
+        try { const r = await fetch(`/api/public/events?sportId=2&date=${date}&include=scores`); show(await r.json()); } catch(e){ err(e); }
+      };
+      document.getElementById('btn-affiliates').onclick = async () => {
+        try { const r = await fetch('/api/public/affiliates'); show(await r.json()); } catch(e){ err(e); }
+      };
+      document.getElementById('btn-teams').onclick = async () => {
+        try { const r = await fetch('/api/public/teams?sportId=2'); show(await r.json()); } catch(e){ err(e); }
+      };
+      document.getElementById('btn-schedules').onclick = async () => {
+        try { const r = await fetch('/api/public/schedules?sportId=2&limit=50'); show(await r.json()); } catch(e){ err(e); }
+      };
+    </script>
+  </body>
+</html>
