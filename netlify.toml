@@ -1,16 +1,16 @@
+# netlify.toml
 [build]
-publish = "."
-command = ""
+  publish = "."
 
-# Proxy API calls to Fly
+# Proxy API calls
 [[redirects]]
   from = "/api/*"
-  to = "https://bethub-api.fly.dev/api/:splat"
+  to   = "https://bethub-api.fly.dev/api/:splat"
   status = 200
-  force = true
+  force  = true
 
-# SPA catch-all so /promo, /news, etc. still serve index.html
+# SPA fallback (so /#/… or any route resolves to index.html)
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200

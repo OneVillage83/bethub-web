@@ -4,25 +4,17 @@
   <meta charset="utf-8" />
   <title>OneStop Bets – Preview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Important for SPAs on Netlify so deep links don't 404 -->
   <base href="/" />
   <style>
     :root{
       --bg:#f6f7fb; --card:#fff; --ink:#222; --muted:#6b7280; --brand:#0ea5e9;
-      --ok:#16a34a; --warn:#f59e0b; --danger:#dc2626; --border:#e5e7eb;
-      --chip:#eef6ff; --chip-ink:#0f3a7a;
-      --radius:14px;
+      --ok:#16a34a; --border:#e5e7eb; --radius:14px;
+      --tab-active:#e0f2fe;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color:var(--ink); background:var(--bg);
-    }
-    header{
-      position:sticky; top:0; z-index:30;
-      background:#fff; border-bottom:1px solid var(--border);
-    }
+    body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink);background:var(--bg)}
+    header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--border)}
     .wrap{max-width:1100px;margin:0 auto;padding:16px}
     .brand{display:flex;align-items:center;gap:10px}
     .logo{display:inline-grid;grid-auto-flow:column;gap:4px;align-items:center}
@@ -37,49 +29,38 @@
     .status.ok::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
     .grid{display:grid;grid-template-columns:1fr 1.5fr;gap:16px}
     @media (max-width:960px){.grid{grid-template-columns:1fr}}
-    .card{
-      background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-      box-shadow:0 1px 2px rgba(0,0,0,.04); overflow:hidden;
-    }
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
     .card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;letter-spacing:.02em}
     .events{padding:8px}
-    .event{
-      background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px;
-      cursor:pointer; transition:transform .05s ease, box-shadow .15s ease; 
-    }
-    .event:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(2,6,23,.06)}
+    .event{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px;cursor:pointer;transition:transform .05s ease,box-shadow .15s ease}
+    .event:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,.06)}
     .event-title{font-weight:600}
     .event-meta{display:flex;gap:10px;margin-top:6px;color:var(--muted);font-size:12px}
     .pill{padding:2px 8px;border-radius:999px;background:#f1f5f9;border:1px solid var(--border)}
     .details{padding:10px}
     .hint{color:var(--muted);font-size:14px}
     .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px}
-    .book{
-      border:1px solid var(--border); border-radius:12px; padding:12px; background:#fff;
-    }
+    .book{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
     .book h4{margin:0 0 6px 0;font-size:13px}
     .line{display:flex;justify-content:space-between;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    .chip{display:inline-block;background:var(--chip);color:var(--chip-ink);border-radius:999px;padding:2px 8px;font-size:12px}
-    .toolbar{
-      position:sticky; bottom:0; z-index:30; background:#fff; border-top:1px solid var(--border);
-    }
+    nav.toolbar{position:sticky;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--border)}
     .tabs{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr)}
-    .tab{padding:12px 8px;text-align:center;color:#111827;cursor:pointer}
+    .tab{padding:12px 8px;text-align:center;color:#111827;cursor:pointer;text-decoration:none;border-top:2px solid transparent}
     .tab:hover{background:#fafafa}
+    .tab.active{border-top-color:var(--brand);background:var(--tab-active);font-weight:600}
     .sr-only{position:absolute;left:-9999px}
+    [hidden]{display:none !important}
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
       <div class="brand">
-        <div class="logo" aria-label="OneStop Bets">
-          <b>OS</b><b>B</b>
-        </div>
+        <div class="logo" aria-label="OneStop Bets"><b>OS</b><b>B</b></div>
         <h1>OneStop Bets – Preview</h1>
       </div>
 
-      <div class="controls">
+      <div id="home-controls" class="controls">
         <label>Sport:
           <select id="sport">
             <option value="2" selected>NFL</option>
@@ -87,9 +68,7 @@
             <option value="3">MLB</option>
           </select>
         </label>
-        <label>Date:
-          <input id="date" type="date" />
-        </label>
+        <label>Date:<input id="date" type="date" /></label>
         <button id="refresh" class="btn">Refresh</button>
         <span id="apiStatus" class="status">Checking API…</span>
         <span class="status">API: /api/public</span>
@@ -97,15 +76,15 @@
     </div>
   </header>
 
-  <main class="wrap" id="app" aria-live="polite">
-    <section aria-labelledby="today">
-      <h2 id="today" class="sr-only">Today’s edges</h2>
+  <main class="wrap" aria-live="polite">
+    <!-- HOME VIEW -->
+    <section id="view-home">
+      <h2 class="sr-only">Today’s edges</h2>
       <div class="grid">
         <div class="card">
           <h3>EVENTS</h3>
           <div id="events" class="events"></div>
         </div>
-
         <div class="card">
           <h3>DETAILS</h3>
           <div id="details" class="details">
@@ -113,28 +92,66 @@
           </div>
         </div>
       </div>
+      <br/><br/>
     </section>
-    <br/><br/>
+
+    <!-- OTHER VIEWS (placeholders so tabs aren’t blank) -->
+    <section id="view-builder" hidden>
+      <div class="card"><h3>Bet Builder</h3>
+        <div class="details"><p class="hint">Parlay builder coming soon.</p></div>
+      </div>
+    </section>
+
+    <section id="view-activity" hidden>
+      <div class="card"><h3>Activity</h3>
+        <div class="details"><p class="hint">Recent wagers and results will appear here.</p></div>
+      </div>
+    </section>
+
+    <section id="view-experts" hidden>
+      <div class="card"><h3>Experts</h3>
+        <div class="details"><p class="hint">Expert picks feed placeholder.</p></div>
+      </div>
+    </section>
+
+    <section id="view-news" hidden>
+      <div class="card"><h3>News</h3>
+        <div class="details"><p class="hint">Team and player news feed placeholder.</p></div>
+      </div>
+    </section>
+
+    <section id="view-stats" hidden>
+      <div class="card"><h3>Stats</h3>
+        <div class="details"><p class="hint">League & team stats dashboard placeholder.</p></div>
+      </div>
+    </section>
+
+    <section id="view-promo" hidden>
+      <div class="card"><h3>Promotions</h3>
+        <div class="details"><p class="hint">Welcome offer cards would show here. Coming soon.</p></div>
+      </div>
+    </section>
   </main>
 
   <nav class="toolbar" aria-label="Bottom">
     <div class="tabs">
-      <div class="tab">Home</div>
-      <div class="tab">Bet Builder</div>
-      <div class="tab">Activity</div>
-      <div class="tab">Experts</div>
-      <div class="tab">News</div>
-      <div class="tab">Stats</div>
-      <div class="tab" id="promoTab">Promo</div>
+      <a class="tab" data-route="home"     href="#/home">Home</a>
+      <a class="tab" data-route="builder"  href="#/builder">Bet Builder</a>
+      <a class="tab" data-route="activity" href="#/activity">Activity</a>
+      <a class="tab" data-route="experts"  href="#/experts">Experts</a>
+      <a class="tab" data-route="news"     href="#/news">News</a>
+      <a class="tab" data-route="stats"    href="#/stats">Stats</a>
+      <a class="tab" data-route="promo"    href="#/promo">Promo</a>
     </div>
   </nav>
 
   <script>
     // --- Config ---
-    const API = '/api/public'; // goes through Netlify redirect
+    const API = '/api/public'; // proxied by Netlify
 
     // --- Helpers ---
     const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
     const el = (tag, attrs={}, ...children) => {
       const node = document.createElement(tag);
       Object.entries(attrs).forEach(([k,v]) => {
@@ -142,37 +159,27 @@
         else if (k === 'html') node.innerHTML = v;
         else node.setAttribute(k, v);
       });
-      children.forEach(c => node.append(c));
+      children.forEach(c => c && node.append(c));
       return node;
     };
-    const fmtTime = iso => {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    };
+    const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     const todayInput = () => {
-      const d = new Date();
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
+      const d = new Date(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
       return `${d.getFullYear()}-${mm}-${dd}`;
     };
 
-    // --- API pings / status ---
+    // --- API status ---
     async function checkApi(){
       const badge = $('#apiStatus');
       try{
-        // a very light call (delta/start is fine with filters, but use events compact)
         const params = new URLSearchParams({sportId:2, date: $('#date').value, compact:'true'});
         const r = await fetch(`${API}/events?${params}`);
         if(!r.ok) throw new Error(`${r.status}`);
-        badge.classList.add('ok');
-        badge.textContent = 'ok';
-      }catch(err){
-        badge.classList.remove('ok');
-        badge.textContent = `API error`;
-      }
+        badge.classList.add('ok'); badge.textContent = 'ok';
+      }catch{ badge.classList.remove('ok'); badge.textContent = 'API error'; }
     }
 
-    // --- Load events list ---
+    // --- Home view: list events ---
     async function loadEvents(){
       const sportId = $('#sport').value;
       const date = $('#date').value;
@@ -180,23 +187,14 @@
       target.innerHTML = '';
       const qs = new URLSearchParams({compact:'true', sportId, date});
       const res = await fetch(`${API}/events?${qs}`);
-      if(!res.ok){
-        target.append(el('div', {}, `Failed to load events (${res.status})`));
-        return;
-      }
+      if(!res.ok){ target.append(el('div', {}, `Failed to load events (${res.status})`)); return; }
       const data = await res.json();
-      if(!data.events || data.events.length === 0){
-        target.append(el('div', {}, 'No events for this date.'));
-        return;
-      }
+      if(!data.events || data.events.length === 0){ target.append(el('div', {}, 'No events for this date.')); return; }
       data.events.forEach(ev => {
         const node = el('div', {class:'event', tabindex:'0'});
         const title = el('div', {class:'event-title'}, `${ev.away_team} @ ${ev.home_team}`);
         const meta = el('div', {class:'event-meta'});
-        meta.append(
-          el('span', {class:'pill'}, (ev.status || '').replace('STATUS_','').replace('_',' ')),
-          el('span', {}, fmtTime(ev.event_date))
-        );
+        meta.append(el('span', {class:'pill'}, (ev.status || '').replace('STATUS_','').replace('_',' ')), el('span', {}, fmtTime(ev.event_date)));
         node.append(title, meta);
         node.addEventListener('click', () => showEvent(ev.event_id, title.textContent));
         node.addEventListener('keypress', (e)=>{ if(e.key==='Enter') node.click(); });
@@ -204,120 +202,76 @@
       });
     }
 
-    // --- Show event details (combined odds helper) ---
+    // --- Home view: details using combined odds helper ---
     async function showEvent(eventId, label){
-      const box = $('#details');
-      box.innerHTML = '';
-      box.append(el('div', {class:'hint'}, `Loading odds for `, el('span',{class:'chip'}, label), ' …'));
-
+      const box = $('#details'); box.innerHTML = ''; box.append(el('div', {class:'hint'}, `Loading odds for `, el('span',{class:'pill'}, label), ' …'));
       try{
         const qs = new URLSearchParams({include:'all_periods'});
         const res = await fetch(`${API}/events/${eventId}/odds/combined?${qs}`);
         if(!res.ok) throw new Error('Odds not available');
         const { event, note } = await res.json();
 
-        box.innerHTML = '';
-        box.append(
-          el('div', {class:'hint'}, label),
-          note ? el('p', {class:'hint'}, note) : null
-        );
+        box.innerHTML = ''; box.append(el('div', {class:'hint'}, label), note ? el('p', {class:'hint'}, note) : null);
 
-        // Render "Period Full Game" lines across affiliates if present
-        const booksWrap = el('div', {class:'book-grid'});
         const lp = event?.line_periods || {};
         const affiliateIds = Object.keys(lp);
-        if (affiliateIds.length === 0){
-          box.append(el('p', {}, 'No book lines available.'));
-          return;
-        }
-
+        const grid = el('div', {class:'book-grid'});
         affiliateIds.forEach(aid => {
-          // The structure is lp[affiliateId].period_full_game.{moneyline/spread/total}
-          const full = lp[aid]?.period_full_game;
-          if (!full) return;
+          const full = lp[aid]?.period_full_game; if(!full) return;
           const book = el('div', {class:'book'});
           const name = full.affiliate?.affiliate_name || `Book ${aid}`;
           book.append(el('h4', {}, name));
-
-          // Moneyline
           if (full.moneyline){
             const ml = full.moneyline;
-            book.append(
-              el('div', {class:'line'},
-                el('div', {}, 'ML Away'),
-                el('div', {}, String(ml.moneyline_away))
-              ),
-              el('div', {class:'line'},
-                el('div', {}, 'ML Home'),
-                el('div', {}, String(ml.moneyline_home))
-              )
-            );
+            book.append(el('div', {class:'line'}, el('div', {}, 'ML Away'), el('div', {}, String(ml.moneyline_away))));
+            book.append(el('div', {class:'line'}, el('div', {}, 'ML Home'), el('div', {}, String(ml.moneyline_home))));
           }
-
-          // Spread
           if (full.spread){
             const s = full.spread;
-            book.append(
-              el('div', {class:'line'},
-                el('div', {}, 'Spread Away'),
-                el('div', {}, `${s.point_spread_away} (${s.point_spread_away_money})`)
-              ),
-              el('div', {class:'line'},
-                el('div', {}, 'Spread Home'),
-                el('div', {}, `${s.point_spread_home} (${s.point_spread_home_money})`)
-              )
-            );
+            book.append(el('div', {class:'line'}, el('div', {}, 'Spread Away'), el('div', {}, `${s.point_spread_away} (${s.point_spread_away_money})`)));
+            book.append(el('div', {class:'line'}, el('div', {}, 'Spread Home'), el('div', {}, `${s.point_spread_home} (${s.point_spread_home_money})`)));
           }
-
-          // Total
           if (full.total){
             const t = full.total;
-            book.append(
-              el('div', {class:'line'},
-                el('div', {}, 'Total Over'),
-                el('div', {}, `${t.total_over} (${t.total_over_money})`)
-              ),
-              el('div', {class:'line'},
-                el('div', {}, 'Total Under'),
-                el('div', {}, `${t.total_under} (${t.total_under_money})`)
-              )
-            );
+            book.append(el('div', {class:'line'}, el('div', {}, 'Total Over'), el('div', {}, `${t.total_over} (${t.total_over_money})`)));
+            book.append(el('div', {class:'line'}, el('div', {}, 'Total Under'), el('div', {}, `${t.total_under} (${t.total_under_money})`)));
           }
-
-          booksWrap.append(book);
+          grid.append(book);
         });
-
-        if (booksWrap.children.length === 0){
-          box.append(el('p', {}, 'No full-game market lines available.'));
-        } else {
-          box.append(booksWrap);
-        }
-      }catch(err){
-        box.innerHTML = '';
-        box.append(el('p', {}, 'Could not load odds for this event.'));
-      }
+        box.append(grid.children.length ? grid : el('p', {}, 'No full-game market lines available.'));
+      }catch{ box.innerHTML=''; box.append(el('p', {}, 'Could not load odds for this event.')); }
     }
 
-    // --- Promo tab placeholder (so it never appears blank) ---
-    $('#promoTab').addEventListener('click', () => {
-      const box = $('#details');
-      box.innerHTML = '';
-      box.append(
-        el('h3', {}, 'Promotions'),
-        el('p', {class:'hint'}, 'Welcome offer cards would show here. Coming soon.')
-      );
-      window.scrollTo({top:0, behavior:'smooth'});
-    });
+    // --- Router (hash-based) ---
+    const routes = ['home','builder','activity','experts','news','stats','promo'];
+    function render(){
+      const route = (location.hash.replace('#/','') || 'home').toLowerCase();
+      routes.forEach(r => {
+        const view = document.getElementById(`view-${r}`);
+        if (view) view.hidden = (r !== route);
+        const tab = document.querySelector(`.tab[data-route="${r}"]`);
+        tab?.classList.toggle('active', r === route);
+      });
+      // Show/Hide Home controls
+      $('#home-controls').hidden = route !== 'home';
+
+      if (route === 'home'){
+        if (!$('#date').value) $('#date').value = todayInput();
+        // Load/refresh data when entering home
+        loadEvents(); checkApi();
+      }
+    }
+    window.addEventListener('hashchange', render);
 
     // --- Boot ---
     (function init(){
       $('#date').value = todayInput();
-      $('#refresh').addEventListener('click', () => { loadEvents(); checkApi(); });
+      $('#refresh').addEventListener('click', ()=>{ loadEvents(); checkApi(); });
       $('#sport').addEventListener('change', loadEvents);
-      $('#date').addEventListener('change', () => { loadEvents(); checkApi(); });
+      $('#date').addEventListener('change', ()=>{ loadEvents(); checkApi(); });
 
-      loadEvents();
-      checkApi();
+      if (!location.hash) location.hash = '#/home';
+      render();
     })();
   </script>
 </body>
