@@ -1,47 +1,217 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>BetHub Data Viewer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      body { font-family: system-ui, Arial, sans-serif; margin: 20px; }
-      button { margin: 6px 8px 6px 0; padding: 8px 12px; }
-      pre { white-space: pre-wrap; background:#111; color:#eee; padding:12px; border-radius:8px; }
-    </style>
-  </head>
-  <body>
-    <h1>BetHub Data Viewer</h1>
-    <div>
-      <button id="btn-sports">Load Sports</button>
-      <button id="btn-events">Today’s NFL Events</button>
-      <button id="btn-affiliates">Affiliates</button>
-      <button id="btn-teams">NFL Teams</button>
-      <button id="btn-schedules">NFL Schedules</button>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bethub – NFL Odds</title>
+  <style>
+    :root{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    body{margin:0;background:#0b0f14;color:#e6edf3}
+    header{padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header h1{font-size:18px;margin:0}
+    main{display:grid;grid-template-columns: 360px 1fr; gap:16px; padding:16px}
+    @media (max-width: 900px){ main{grid-template-columns: 1fr} }
+    .card{background:#111827;border:1px solid #1f2937;border-radius:14px}
+    .card h2{margin:0;font-size:14px;color:#9fb1c1;text-transform:uppercase;letter-spacing:.08em}
+    .card .hd{padding:12px 14px;border-bottom:1px solid #1f2937}
+    .card .bd{padding:12px 14px}
+    .list{display:flex;flex-direction:column;gap:8px;max-height:70vh;overflow:auto}
+    .ev{padding:10px 12px;border:1px solid #1f2937;border-radius:12px;background:#0f1620;cursor:pointer}
+    .ev:hover{border-color:#334155}
+    .ev small{color:#8aa0b3}
+    .muted{color:#8aa0b3}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:8px;border-bottom:1px solid #1f2937;text-align:left}
+    th{color:#9fb1c1;font-weight:600}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input,select,button{background:#0f1620;color:#e6edf3;border:1px solid #1f2937;border-radius:10px;padding:8px 10px}
+    button{cursor:pointer}
+    .pill{padding:2px 8px;border:1px solid #1f2937;border-radius:999px;font-size:12px;color:#9fb1c1}
+    .warn{color:#f59e0b}
+    .good{color:#22c55e}
+    .bad{color:#ef4444}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bethub • NFL Odds</h1>
+    <div class="row">
+      <label>Sport:
+        <select id="sport">
+          <option value="2" selected>NFL</option>
+        </select>
+      </label>
+      <label>Date:
+        <input id="date" type="date">
+      </label>
+      <button id="refresh">Refresh</button>
+      <span id="status" class="pill">idle</span>
     </div>
-    <pre id="out">Click a button to load data…</pre>
+    <span class="muted">API: <code id="apiBase"></code></span>
+  </header>
 
-    <script>
-      const out = document.getElementById('out');
-      const show = (d) => out.textContent = JSON.stringify(d, null, 2);
-      const err  = (e) => out.textContent = 'Error: ' + e;
+  <main>
+    <section class="card">
+      <div class="hd"><h2>Events</h2></div>
+      <div class="bd">
+        <div id="events" class="list"></div>
+      </div>
+    </section>
 
-      document.getElementById('btn-sports').onclick = async () => {
-        try { const r = await fetch('/api/public/sports'); show(await r.json()); } catch(e){ err(e); }
-      };
-      document.getElementById('btn-events').onclick = async () => {
-        const date = new Date().toISOString().slice(0,10);
-        try { const r = await fetch(`/api/public/events?sportId=2&date=${date}&include=scores`); show(await r.json()); } catch(e){ err(e); }
-      };
-      document.getElementById('btn-affiliates').onclick = async () => {
-        try { const r = await fetch('/api/public/affiliates'); show(await r.json()); } catch(e){ err(e); }
-      };
-      document.getElementById('btn-teams').onclick = async () => {
-        try { const r = await fetch('/api/public/teams?sportId=2'); show(await r.json()); } catch(e){ err(e); }
-      };
-      document.getElementById('btn-schedules').onclick = async () => {
-        try { const r = await fetch('/api/public/schedules?sportId=2&limit=50'); show(await r.json()); } catch(e){ err(e); }
-      };
-    </script>
-  </body>
+    <section class="card">
+      <div class="hd"><h2 id="detailsTitle">Details</h2></div>
+      <div class="bd" id="details">
+        <p class="muted">Select an event to view books & lines.</p>
+      </div>
+    </section>
+  </main>
+
+<script>
+  // --- Configure your API base here (Netlify proxy also works if you added netlify.toml redirects)
+  const API_BASE = "https://bethub-api.fly.dev/api/public";
+  document.getElementById("apiBase").textContent = API_BASE;
+
+  const sportEl = document.getElementById("sport");
+  const dateEl  = document.getElementById("date");
+  const statusEl= document.getElementById("status");
+  const evList  = document.getElementById("events");
+  const details = document.getElementById("details");
+  const detailsTitle = document.getElementById("detailsTitle");
+
+  // default date = today (local)
+  const today = new Date();
+  dateEl.value = new Date(today.getTime() - today.getTimezoneOffset()*60000)
+                    .toISOString().slice(0,10);
+
+  document.getElementById("refresh").addEventListener("click", loadEvents);
+
+  async function loadEvents(){
+    const sportId = sportEl.value;
+    const date = dateEl.value;
+    status("loading");
+    evList.innerHTML = "";
+    details.innerHTML = `<p class="muted">Select an event to view books & lines.</p>`;
+    detailsTitle.textContent = "Details";
+
+    try{
+      const url = `${API_BASE}/events?compact=true&sportId=${sportId}&date=${encodeURIComponent(date)}&include=scores`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if(!json.ok){ throw new Error(json.error || "Failed"); }
+
+      if((json.events||[]).length===0){
+        evList.innerHTML = `<div class="muted">No events for ${date}.</div>`;
+      } else {
+        json.events.forEach(e => {
+          const div = document.createElement("div");
+          div.className = "ev";
+          const status = e.status?.replace("STATUS_","") || "UNKNOWN";
+          div.innerHTML = `
+            <div><strong>${e.away_team} @ ${e.home_team}</strong></div>
+            <small>${new Date(e.event_date).toLocaleString()} • <span class="pill">${status}</span></small>
+          `;
+          div.addEventListener("click", () => showCombinedOdds(e));
+          evList.appendChild(div);
+        });
+      }
+      status("ok");
+    }catch(err){
+      console.error(err);
+      evList.innerHTML = `<div class="warn">Error: ${String(err.message||err)}</div>`;
+      status("error");
+    }
+  }
+
+  function status(s){
+    statusEl.textContent = s;
+    statusEl.classList.remove("good","bad","warn");
+    if(s==="ok") statusEl.classList.add("good");
+    else if(s==="error") statusEl.classList.add("bad");
+    else statusEl.classList.add("warn");
+  }
+
+  function renderOddsTable(event){
+    const lp = event?.line_periods;
+    if(!lp){ return `<p class="muted">No odds available.</p>`; }
+    const fullGame = [];
+    for(const affiliateId of Object.keys(lp)){
+      const p = lp[affiliateId]?.period_full_game;
+      if(!p) continue;
+      fullGame.push({
+        book: p.affiliate?.affiliate_name || `Book ${affiliateId}`,
+        money_away: p.moneyline?.moneyline_away ?? null,
+        money_home: p.moneyline?.moneyline_home ?? null,
+        spread_away: p.spread?.point_spread_away ?? null,
+        spread_away_money: p.spread?.point_spread_away_money ?? null,
+        spread_home: p.spread?.point_spread_home ?? null,
+        spread_home_money: p.spread?.point_spread_home_money ?? null,
+        total_over: p.total?.total_over ?? null,
+        total_over_money: p.total?.total_over_money ?? null,
+        total_under: p.total?.total_under ?? null,
+        total_under_money: p.total?.total_under_money ?? null,
+        updated: p.moneyline?.date_updated || p.spread?.date_updated || p.total?.date_updated || null
+      });
+    }
+    if(fullGame.length===0) return `<p class="muted">No full game markets.</p>`;
+    const rows = fullGame.map(r => `
+      <tr>
+        <td>${r.book}</td>
+        <td>${fmt(r.money_away)}</td>
+        <td>${fmt(r.money_home)}</td>
+        <td>${fmt(r.spread_away)} (${fmt(r.spread_away_money)})</td>
+        <td>${fmt(r.spread_home)} (${fmt(r.spread_home_money)})</td>
+        <td>O ${fmt(r.total_over)} (${fmt(r.total_over_money)})</td>
+        <td>U ${fmt(r.total_under)} (${fmt(r.total_under_money)})</td>
+      </tr>
+    `).join("");
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th>Book</th>
+            <th>ML Away</th>
+            <th>ML Home</th>
+            <th>Spread Away</th>
+            <th>Spread Home</th>
+            <th>Total Over</th>
+            <th>Total Under</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function fmt(v){ return (v===null || v===undefined || v===0.0001) ? "—" : v; }
+
+  async function showCombinedOdds(ev){
+    try{
+      detailsTitle.textContent = `${ev.away_team} @ ${ev.home_team}`;
+      details.innerHTML = `<p class="muted">Loading odds…</p>`;
+      const url = `${API_BASE}/events/${ev.event_id}/odds/combined?include=all_periods`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if(!json.ok){ throw new Error(json.error || "Failed"); }
+
+      const event = json.event || {};
+      const score = event.score || {};
+      const header = `
+        <div class="row">
+          <div><strong>${ev.away_team}</strong> @ <strong>${ev.home_team}</strong></div>
+          <span class="pill">${(score.event_status_detail || ev.status || "").toString().replace("STATUS_","")}</span>
+          ${score.score_away!=null && score.score_home!=null ? `<span class="pill">${score.score_away} - ${score.score_home}</span>` : ""}
+        </div>
+        <p class="muted">${new Date(ev.event_date).toLocaleString()}</p>
+      `;
+      details.innerHTML = header + renderOddsTable(event);
+    }catch(err){
+      console.error(err);
+      details.innerHTML = `<div class="warn">Error: ${String(err.message||err)}</div>`;
+    }
+  }
+
+  // initial load
+  loadEvents();
+</script>
+</body>
 </html>
