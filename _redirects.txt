@@ -1,0 +1,2 @@
+# Proxy all /api/* traffic to the Fly backend
+/api/*  https://bethub-api.fly.dev/api/:splat  200
